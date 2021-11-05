@@ -73,7 +73,7 @@ def MeteredPipe(duplex=True, q=None):
     if duplex:
         raise NotImplementedError
 
-    PIPE_BUFFER_SIZE = 2 ** 10
+    PIPE_BUFFER_SIZE = 2 ** 12
 
     if not q:
         # `maxsize` is the number of objects
@@ -96,6 +96,8 @@ def visualize(cr_logs: list, decimals=3) -> plox.Plox:
     # offset each record by its `sent` timestamp
     df = (df.T - df.s0).T
 
+    # print(df.to_markdown())
+
     # round to `decimals` and offset by the same
     df = df.applymap(
         lambda x:
@@ -109,12 +111,12 @@ def visualize(cr_logs: list, decimals=3) -> plox.Plox:
         rcParam.Figure.figsize: (1, 16),
         rcParam.Axes.linewidth: 0.01,
         rcParam.Font.size: 6,
+        rcParam.Figure.dpi: 720,
     }
 
     with plox.Plox(style) as px:
         v = int(np.ceil(df.abs().max().max()))
-        print(f"v = {v}")
-        im = px.a.imshow(df, aspect='auto', interpolation='none', vmin=(-v * 1.1), vmax=(v * 1.1), cmap='coolwarm')
+        im = px.a.imshow(df, aspect='auto', interpolation='none', vmin=(-v * 1.01), vmax=(v * 1.01), cmap='coolwarm')
         px.a.set_xticks(np.arange(len(df.columns)))
         px.a.set_xticklabels(df.columns)
         cb = px.f.colorbar(im)
