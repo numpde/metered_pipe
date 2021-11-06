@@ -153,7 +153,7 @@ def visualize(cr_logs: list, decimals=3) -> plox.Plox:
 
         ax: matplotlib.pyplot.Axes = px.a.twinx()
         ax.plot(tt.index, nn, c='k', lw=0.2)
-        ax.set_yticks(np.arange(0, max(nn) + 2, 5))
+        ax.set_ylim(-1, max(nn) + 2)
         ax.set_ylabel("Events / ms")
 
         # Example usage:
