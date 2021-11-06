@@ -19,8 +19,6 @@ import numpy
 import inclusive
 import plox
 
-import more_itertools
-
 # log_queue = mp.Manager().Queue(maxsize=(2 ** 20))
 
 INTERVAL_ON_QUEUE_FULL = 1e-5  # seconds
@@ -122,8 +120,11 @@ def visualize(cr_logs: list, decimals=3) -> plox.Plox:
     with plox.Plox(style) as px:
         v = int(np.ceil(df.abs().max().max()))
         im = px.a.imshow(df.T, aspect='auto', interpolation='none', vmin=(-v * 1.1), vmax=(v * 1.1), cmap='coolwarm')
+
         px.a.set_yticks(np.arange(len(df.columns)))
         px.a.set_yticklabels(df.columns)
+
+        px.a.set_xlabel("Event")
 
         px.a.invert_yaxis()
 
@@ -145,7 +146,7 @@ def visualize(cr_logs: list, decimals=3) -> plox.Plox:
         k = 3e-3  # timescale (seconds)
         nn[0] = 1
 
-        for ((m, ta), (n, tb)) in more_itertools.pairwise(enumerate(tt)):
+        for ((m, ta), (n, tb)) in zip(enumerate(tt), enumerate(tt[1:], start=1)):
             nn[n] = 1 + (nn[m] * np.exp(-(tb - ta) / k))
 
         nn *= (1e-3 / k)
@@ -153,7 +154,9 @@ def visualize(cr_logs: list, decimals=3) -> plox.Plox:
         ax: matplotlib.pyplot.Axes = px.a.twinx()
         ax.plot(tt.index, nn, c='k', lw=0.2)
         ax.set_yticks(np.arange(0, max(nn) + 2, 5))
-        ax.set_ylabel("events / ms")
+        ax.set_ylabel("Events / ms")
 
+        # Example usage:
         # px.f.savefig(Path(__file__).with_suffix('.png'), dpi=720)
+
         yield px
