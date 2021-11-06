@@ -128,6 +128,7 @@ def visualize(cr_logs: list, decimals=3) -> plox.Plox:
 
         cb = px.f.colorbar(im, aspect=3)
         cb.set_ticks(inclusive.range[-v, v])
+
         # note the reverse offset by `decimals`
         labels = [
             fr"$10^{{{np.abs(x) - decimals - 1}}}$s"
