@@ -19,8 +19,6 @@ import numpy
 import inclusive
 import plox
 
-# log_queue = mp.Manager().Queue(maxsize=(2 ** 20))
-
 INTERVAL_ON_QUEUE_FULL = 1e-5  # seconds
 
 
@@ -80,7 +78,7 @@ def MeteredPipe(duplex=True, q=None):
         # `maxsize` is the number of objects
         q = multiprocessing.Manager().Queue(maxsize=PIPE_BUFFER_SIZE)
 
-        # Something like this would also work, may be a little faster
+        # Something like this would also work and may be a little faster
         # OBJ_SIZE = 1024
         # q = faster_fifo.Queue(PIPE_BUFFER_SIZE * OBJ_SIZE)
 
