@@ -3,7 +3,7 @@
 This interprocess pipe records the timestamps
 when
 
-s0) `send` is called,
+s0) `send` is called ("event"),
 
 s1) `send` succeeds,
 
