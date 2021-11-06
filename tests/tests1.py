@@ -1,5 +1,6 @@
 # RA, 2021-11-05
 #
+import multiprocessing
 from unittest import TestCase
 
 import numpy.random
@@ -78,12 +79,29 @@ class TestMeteredPipe(TestCase):
 
         n = 64
 
-        for x in range(n):
-            cw.send(x)
-            time.sleep(0.5 * (1 + numpy.random.rand()) * 1e-3)
+        def send():
+            for x in range(n):
+                cw.send(x)
+                time.sleep((2 * numpy.random.rand()) * 1e-3)
 
-        for _ in range(n):
-            cr.recv()
+        def recv(ret):
+            time.sleep(3e-3)
+
+            for _ in range(n):
+                cr.recv()
+                time.sleep(5e-4)  # pretend to be busy
+
+            ret.put(cr)
+
+        ret = multiprocessing.Manager().Queue()
+
+        from multiprocessing import Process
+        processes = {Process(target=send, args=()), Process(target=recv, args=(ret,))}
+
+        [p.start() for p in processes]
+        [p.join() for p in processes]
+
+        cr = ret.get(block=False)
 
         log = []
         cr.flush_log_using(log.append)
