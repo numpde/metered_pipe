@@ -12,6 +12,7 @@ import queue
 import time
 import multiprocessing
 
+import matplotlib.pyplot
 import pandas
 import numpy
 
@@ -93,6 +94,8 @@ def visualize(cr_logs: list, decimals=3) -> plox.Plox:
     df = pandas.DataFrame(data=cr_logs)
     assert list(df.columns) == ['s0', 's1', 't0', 't1']
 
+    tt = df.s0
+
     # offset each record by its `sent` timestamp
     df = (df.T - df.s0).T
 
@@ -108,7 +111,7 @@ def visualize(cr_logs: list, decimals=3) -> plox.Plox:
     from plox import rcParam
 
     style = {
-        rcParam.Figure.figsize: (1, 16),
+        rcParam.Figure.figsize: (16, 1),
         rcParam.Axes.linewidth: 0.01,
         rcParam.Font.size: 6,
         rcParam.Figure.dpi: 720,
@@ -116,10 +119,13 @@ def visualize(cr_logs: list, decimals=3) -> plox.Plox:
 
     with plox.Plox(style) as px:
         v = int(np.ceil(df.abs().max().max()))
-        im = px.a.imshow(df, aspect='auto', interpolation='none', vmin=(-v * 1.01), vmax=(v * 1.01), cmap='coolwarm')
-        px.a.set_xticks(np.arange(len(df.columns)))
-        px.a.set_xticklabels(df.columns)
-        cb = px.f.colorbar(im)
+        im = px.a.imshow(df.T, aspect='auto', interpolation='none', vmin=(-v * 1.1), vmax=(v * 1.1), cmap='coolwarm')
+        px.a.set_yticks(np.arange(len(df.columns)))
+        px.a.set_yticklabels(df.columns)
+
+        px.a.invert_yaxis()
+
+        cb = px.f.colorbar(im, aspect=3)
         cb.set_ticks(inclusive.range[-v, v])
         # note the reverse offset by `decimals`
         labels = [
@@ -127,10 +133,24 @@ def visualize(cr_logs: list, decimals=3) -> plox.Plox:
             if x else "0"
             for x in cb.get_ticks()
         ]
-        cb.ax.set_yticklabels(labels=labels)
+        cb.ax.set_yticklabels(labels=labels, fontsize=5)
 
-        cb.ax.text(0.9, +v, "behind", ha='right', va='top', rotation=-90)
-        cb.ax.text(0.9, -v, "ahead", ha='right', va='bottom', rotation=-90)
+        cb.ax.text(0.5, +v, "behind", ha='right', va='top', rotation=-90)
+        cb.ax.text(0.5, -v, "ahead", ha='right', va='bottom', rotation=-90)
+
+        # How many events within the last `dt` seconds
+        nn = np.zeros_like(tt)
+        df = 1e-3
+        m = 0
+        for (n, t) in enumerate(tt):
+            while tt[m] < t - df:
+                m += 1
+            nn[n] = (n - m + 1)
+
+        ax: matplotlib.pyplot.Axes = px.a.twinx()
+        ax.plot(tt.index, nn, c='k', lw=0.2)
+        ax.set_yticks(np.arange(0, max(nn) + 2, 5))
+        ax.set_ylabel("Events/ms")
 
         # px.f.savefig(Path(__file__).with_suffix('.png'), dpi=720)
         yield px
