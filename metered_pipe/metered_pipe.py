@@ -139,8 +139,10 @@ def visualize(cr_logs: list, decimals=3) -> plox.Plox:
         cb.ax.text(0.5, -v, "ahead", ha='right', va='bottom', rotation=-90)
 
         # How many events within the last `dt` seconds
+        # TODO: use exponential decay as weight int_{-oo}^t (1/k) e^{(s - t) / k} ds = 1
         nn = np.zeros_like(tt)
         df = 1e-3
+        #f = 1
         m = 0
         for (n, t) in enumerate(tt):
             while tt[m] < t - df:
