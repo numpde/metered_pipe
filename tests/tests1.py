@@ -1,8 +1,10 @@
 # RA, 2021-11-05
-
+#
 from unittest import TestCase
 
+import numpy.random
 import pandas
+import time
 
 from metered_pipe import MeteredPipe
 from metered_pipe import visualize
@@ -74,10 +76,11 @@ class TestMeteredPipe(TestCase):
 
         (cr, cw) = MeteredPipe(duplex=False)
 
-        n = 32
+        n = 64
 
         for x in range(n):
             cw.send(x)
+            time.sleep(0.5 * (1 + numpy.random.rand()) * 1e-3)
 
         for _ in range(n):
             cr.recv()
@@ -97,6 +100,6 @@ class TestMeteredPipe(TestCase):
             for (i, _) in enumerate(df.index):
                 for (j, _) in enumerate(df.columns):
                     t = f"{df.iloc[i, j]:.2}"
-                    px.a.text(j, i, t, fontsize=2, ha='center', va='center')
+                    px.a.text(i, j, t, fontsize=2, ha='center', va='center', rotation=90)
 
             px.f.savefig(filename, dpi=720)
