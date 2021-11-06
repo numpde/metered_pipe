@@ -19,6 +19,8 @@ import numpy
 import inclusive
 import plox
 
+import more_itertools
+
 # log_queue = mp.Manager().Queue(maxsize=(2 ** 20))
 
 INTERVAL_ON_QUEUE_FULL = 1e-5  # seconds
@@ -138,21 +140,20 @@ def visualize(cr_logs: list, decimals=3) -> plox.Plox:
         cb.ax.text(0.5, +v, "behind", ha='right', va='top', rotation=-90)
         cb.ax.text(0.5, -v, "ahead", ha='right', va='bottom', rotation=-90)
 
-        # How many events within the last `dt` seconds
-        # TODO: use exponential decay as weight int_{-oo}^t (1/k) e^{(s - t) / k} ds = 1
+        # How many events within the last `k` seconds
         nn = np.zeros_like(tt)
-        df = 1e-3
-        #f = 1
-        m = 0
-        for (n, t) in enumerate(tt):
-            while tt[m] < t - df:
-                m += 1
-            nn[n] = (n - m + 1)
+        k = 3e-3  # timescale (seconds)
+        nn[0] = 1
+
+        for ((m, ta), (n, tb)) in more_itertools.pairwise(enumerate(tt)):
+            nn[n] = 1 + (nn[m] * np.exp(-(tb - ta) / k))
+
+        nn *= (1e-3 / k)
 
         ax: matplotlib.pyplot.Axes = px.a.twinx()
         ax.plot(tt.index, nn, c='k', lw=0.2)
         ax.set_yticks(np.arange(0, max(nn) + 2, 5))
-        ax.set_ylabel("Events/ms")
+        ax.set_ylabel("events / ms")
 
         # px.f.savefig(Path(__file__).with_suffix('.png'), dpi=720)
         yield px
