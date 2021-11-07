@@ -22,7 +22,12 @@ import inclusive
 import plox
 
 INTERVAL_ON_QUEUE_FULL = 1e-5  # seconds
-INTERVAL_SPEED_LIMIT = 1e-4  # seconds / send
+RETRY_FLUSH_ON_QUEUE_FULL = 10
+
+# Pipe will invoke the system send at most at this frequency,
+# and buffer locally otherwise. A reasonable value is between
+# 1e-6 (system-limited) and 1e-4 (max speed) seconds/send.
+SYSTEM_SEND_MAX_FREQUENCY = 1e-4  # seconds / send
 
 
 class CW:
@@ -33,7 +38,7 @@ class CW:
         self.last_successful_put = 0
 
     def flush(self):
-        while True:
+        for retry in range(RETRY_FLUSH_ON_QUEUE_FULL):
             try:
                 self.q.put(
                     [
@@ -48,13 +53,16 @@ class CW:
                 self.last_successful_put = time.time()
                 self.n += len(self.buffer)
                 self.buffer = []
-                break
+                return
+
+        # Didn't flush this time because the queue is full.
+        pass
 
     def send(self, obj):
         s0 = time.time()
         self.buffer.append((obj, s0))
 
-        if (s0 < (self.last_successful_put + INTERVAL_SPEED_LIMIT)):
+        if (s0 < (self.last_successful_put + SYSTEM_SEND_MAX_FREQUENCY)):
             pass
         else:
             self.flush()
@@ -168,10 +176,11 @@ def visualize(cr_logs: list, decimals=3) -> plox.Plox:
     # print(df.to_markdown())
 
     # round to `decimals` and offset by the same
+    rounding = np.ceil
     df = df.applymap(
         lambda x:
         0 if (x == 0) else
-        np.sign(x) * (1 + int(max(0, np.ceil(np.log10(np.abs(x)) + decimals))))
+        np.sign(x) * (1 + max(0, rounding(np.log10(np.abs(x)) + decimals)))
     )
 
     from plox import rcParam
@@ -230,4 +239,4 @@ def visualize(cr_logs: list, decimals=3) -> plox.Plox:
 
 
 if __name__ == '__main__':
-    print(f"MeteredPipe speed test: {speed_test()} 'send's per second.")
+    print(f"MeteredPipe speed test: {speed_test()} sends per second.")
