@@ -23,3 +23,10 @@ the graph is a running estimate of
 events / ms.
 
 ![summary](tests/tests1.test_visualize_logs.png)
+
+
+**TODO**: 
+Measure the frequency of send calls,
+and if it goes above ~1 call / ms,
+start buffering and packaging multiple
+calls into one system send call.
