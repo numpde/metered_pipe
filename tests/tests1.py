@@ -1,7 +1,8 @@
 # RA, 2021-11-05
-#
-import multiprocessing
+
 from unittest import TestCase
+
+import multiprocessing
 
 import numpy.random
 import pandas
