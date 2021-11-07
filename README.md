@@ -13,6 +13,11 @@ t1) `recv` succeeds.
 
 Thus, it can be used to diagnose communication bottlenecks.
 
+The pipe buffers and packages multiple
+send calls into one system send call
+(controlled by `SYSTEM_SEND_MAX_FREQUENCY`)
+to increase throughput.
+
 The included visualization routine
 produces the following summary plot
 where 
@@ -26,8 +31,3 @@ events / ms.
 
 **NB**: The writing end may require a call to **flush()** when done.
 
-**TODO**: 
-Measure the frequency of send calls,
-and if it goes above ~1 call / ms,
-start buffering and packaging multiple
-calls into one system send call.
