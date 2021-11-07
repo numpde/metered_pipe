@@ -2,6 +2,8 @@
 
 """
 A Pipe analog that records the timestamps of writes and reads.
+
+NB: May require a call to flush() when done.
 """
 
 import collections
@@ -20,43 +22,76 @@ import inclusive
 import plox
 
 INTERVAL_ON_QUEUE_FULL = 1e-5  # seconds
+INTERVAL_SPEED_LIMIT = 1e-4  # seconds / send
 
 
 class CW:
-    def __init__(self, q):
+    def __init__(self, q: queue.Queue):
         self.q = q
         self.n = 0
+        self.buffer = []
+        self.last_successful_put = 0
 
-    def send(self, obj):
-        s0 = time.time()
+    def flush(self):
         while True:
             try:
-                s1 = time.time()
-                self.q.put([(obj, self.n, s0, s1)], block=False)
+                self.q.put(
+                    [
+                        (obj, n, s0, time.time())
+                        for (n, (obj, s0)) in enumerate(self.buffer, start=self.n)
+                    ],
+                    block=False
+                )
             except queue.Full:
                 time.sleep(INTERVAL_ON_QUEUE_FULL)
             else:
-                self.n += 1  # objects sent
+                self.last_successful_put = time.time()
+                self.n += len(self.buffer)
+                self.buffer = []
                 break
+
+    def send(self, obj):
+        s0 = time.time()
+        self.buffer.append((obj, s0))
+
+        if (s0 < (self.last_successful_put + INTERVAL_SPEED_LIMIT)):
+            pass
+        else:
+            self.flush()
 
     @property
     def writable(self):
         return True
 
+    def __del__(self):
+        if self.buffer:
+            raise RuntimeError("Pipe `send` buffer is not empty. Call flush() on it.")
+
 
 class CR:
     def __init__(self, q):
         self.q = q
+        self.buffer = []
         self._log = collections.deque(maxlen=(2 ** 32))
 
-    def recv(self):
+    def fetch(self):
         t0 = time.time()
-        [(obj, n, s0, s1)] = self.q.get(block=True)
-        self.q.task_done()
-        t1 = time.time()
 
-        assert (n == len(self._log))
-        self._log.append({'s0': s0, 's1': s1, 't0': t0, 't1': t1})
+        for (obj, n, s0, s1) in self.q.get(block=True):
+            self.buffer.append(obj)
+            t1 = time.time()
+
+            assert (n == len(self._log))
+            self._log.append({'s0': s0, 's1': s1, 't0': t0, 't1': t1})
+
+        self.q.task_done()
+
+    def recv(self):
+        if not self.buffer:
+            self.fetch()
+
+        obj = self.buffer[0]
+        self.buffer = self.buffer[1:]
 
         return obj
 
@@ -110,9 +145,10 @@ def speed_test():
         cw.send(0)
 
     cw.send(None)
+    cw.flush()
 
     # Consumer process
-    p.join()
+    p.join(timeout=(test_interval + 1))
 
     return (cw.n - 1) / test_interval
 

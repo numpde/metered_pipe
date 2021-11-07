@@ -24,6 +24,7 @@ events / ms.
 
 ![summary](tests/tests1.test_visualize_logs.png)
 
+**NB**: The writing end may require a call to **flush()** when done.
 
 **TODO**: 
 Measure the frequency of send calls,
