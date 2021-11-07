@@ -32,7 +32,7 @@ class CW:
         while True:
             try:
                 s1 = time.time()
-                self.q.put((obj, self.n, s0, s1), block=False)
+                self.q.put([(obj, self.n, s0, s1)], block=False)
             except queue.Full:
                 time.sleep(INTERVAL_ON_QUEUE_FULL)
             else:
@@ -51,7 +51,8 @@ class CR:
 
     def recv(self):
         t0 = time.time()
-        (obj, n, s0, s1) = self.q.get(block=True)
+        [(obj, n, s0, s1)] = self.q.get(block=True)
+        self.q.task_done()
         t1 = time.time()
 
         assert (n == len(self._log))
@@ -83,6 +84,37 @@ def MeteredPipe(duplex=True, q=None):
         # q = faster_fifo.Queue(PIPE_BUFFER_SIZE * OBJ_SIZE)
 
     return (CR(q), CW(q))
+
+
+def speed_test():
+    """
+    Number of pure .send() calls per second.
+    while .recv() is running in parallel.
+    """
+
+    (cr, cw) = MeteredPipe(duplex=False)
+
+    def recv(cr):
+        while True:
+            if cr.recv() is None:
+                break
+
+    # Prepare consumer process
+    p = multiprocessing.Process(target=recv, args=(cr,))
+    p.start()
+
+    test_interval = 2
+
+    t0 = time.time()
+    while (time.time() < t0 + test_interval):
+        cw.send(0)
+
+    cw.send(None)
+
+    # Consumer process
+    p.join()
+
+    return (cw.n - 1) / test_interval
 
 
 @contextlib.contextmanager
@@ -159,3 +191,7 @@ def visualize(cr_logs: list, decimals=3) -> plox.Plox:
         # px.f.savefig(Path(__file__).with_suffix('.png'), dpi=720)
 
         yield px
+
+
+if __name__ == '__main__':
+    print(f"MeteredPipe speed test: {speed_test()} 'send's per second.")
